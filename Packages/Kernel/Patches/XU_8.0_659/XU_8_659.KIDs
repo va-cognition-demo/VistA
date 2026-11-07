@@ -131,11 +131,11 @@ XUESSO2^^0^B117714262
 "BLD",1548,"KRN",9.8,"NM",13,0)
 XUESSO3^^0^B221983051
 "BLD",1548,"KRN",9.8,"NM",14,0)
-XUSAML^^0^B87822485
+XUSAML^^0^B89506055
 "BLD",1548,"KRN",9.8,"NM",17,0)
 XU8PS655^^1^
 "BLD",1548,"KRN",9.8,"NM",18,0)
-XUCERT^^0^B4132125
+XUCERT^^0^B7368674
 "BLD",1548,"KRN",9.8,"NM",19,0)
 XUESSO4^^0^B61505269
 "BLD",1548,"KRN",9.8,"NM",20,0)
@@ -143,7 +143,7 @@ XUP^^0^B11898665
 "BLD",1548,"KRN",9.8,"NM",21,0)
 XUSRB4^^0^B20805610
 "BLD",1548,"KRN",9.8,"NM",22,0)
-XUCERT1^^0^B20606802
+XUCERT1^^0^B20520997
 "BLD",1548,"KRN",9.8,"NM",27,0)
 XLFNSLK^^0^B39616756
 "BLD",1548,"KRN",9.8,"NM",28,0)
@@ -2559,7 +2559,7 @@ NEWKSP(XU8DATA) ; Create KERNEL SYSTEM PARAMETERS entries
 "RTN","XU8PS659",196,0)
  ;
 "RTN","XUCERT")
-0^18^B4132125^n/a
+0^18^B7368674^n/a
 "RTN","XUCERT",1,0)
 XUCERT ;ISD/HGW Kernel PKI Certificate Utilities ;10/01/15  14:19
 "RTN","XUCERT",2,0)
@@ -2621,51 +2621,77 @@ GETISSUE(SIG) ;Subroutine. Save X509 Certificate owner to XOBDATA("XOB RPC","SAM
 "RTN","XUCERT",30,0)
  N CERT
 "RTN","XUCERT",31,0)
- S CERT=$$CERT^XUCERT1(SIG)
+ K XOBDATA("XOB RPC","SAML","ISSUER")
 "RTN","XUCERT",32,0)
- I +CERT=-1 Q  ;Cannot get certificate
+ S CERT=$$CERT^XUCERT1(SIG)
 "RTN","XUCERT",33,0)
- S XOBDATA("XOB RPC","SAML","ISSUER")=$System.Encryption.X509GetField(CERT,"Subject")
+ I +CERT=-1 Q  ;Cannot get certificate
 "RTN","XUCERT",34,0)
- Q
+ S XOBDATA("XOB RPC","SAML","ISSUER")=$System.Encryption.X509GetField(CERT,"Subject")
 "RTN","XUCERT",35,0)
- ;
-"RTN","XUCERT",36,0)
-TEST ;Subroutine. System checks to help with troubleshooting.
-"RTN","XUCERT",37,0)
- ;Check if Cache version >= 2015.2
-"RTN","XUCERT",38,0)
- ;    12345678901234567890123456789012345678901234567890123456789012345678901234567890
-"RTN","XUCERT",39,0)
- W !,"XML digital signature validation is done differently depending on the version"
-"RTN","XUCERT",40,0)
- W !,"of Cache being used on your system:"
-"RTN","XUCERT",41,0)
- W !,"   Versions greater than or equal to 2015.2 use $$VAL1^XUCERT1"
-"RTN","XUCERT",42,0)
- W !,"   Versions less than 2015.2 use $$VAL2^XUCERT1"
-"RTN","XUCERT",43,0)
- W !,"   Your Cache Version is ",$$VERSION^%ZOSV(),!
-"RTN","XUCERT",44,0)
- ;
-"RTN","XUCERT",45,0)
- ;Check if PKI chain of trust to root is available (how?)
-"RTN","XUCERT",46,0)
- ; ** Apparently Cache uses OpenSSL on underlying server for chain of trust. Check OpenSSL version?
-"RTN","XUCERT",47,0)
- ;Check if %SuperServer and %TELNET/SSL is available (how? with https?)
-"RTN","XUCERT",48,0)
- ; ** Is this still needed?
-"RTN","XUCERT",49,0)
- ;Check if a local X.509 certificate is installed (how? same as %SuperServer check?)
-"RTN","XUCERT",50,0)
- ; ** Not needed. All sites use SSL, so they have a certificate on the server.
-"RTN","XUCERT",51,0)
  Q
+"RTN","XUCERT",36,0)
+ ;
+"RTN","XUCERT",37,0)
+ISSUER(SUBJ,EXPECT) ;Function. Verify X509 certificate subject identifies the configured token issuer
+"RTN","XUCERT",38,0)
+ ; Return: 1 if the entire subject, or its single Common Name (CN), exactly matches EXPECT; otherwise 0
+"RTN","XUCERT",39,0)
+ N CN,CNT,DLM,I,RDN
+"RTN","XUCERT",40,0)
+ S SUBJ=$$TRIM^XLFSTR($G(SUBJ)),EXPECT=$$TRIM^XLFSTR($G(EXPECT))
+"RTN","XUCERT",41,0)
+ I (SUBJ="")!(EXPECT="") Q 0
+"RTN","XUCERT",42,0)
+ I SUBJ=EXPECT Q 1
+"RTN","XUCERT",43,0)
+ I (SUBJ["\")!(SUBJ["""") Q 0  ;Reject escaped or quoted values that could hide delimiters
+"RTN","XUCERT",44,0)
+ S DLM=$S($E(SUBJ)="/":"/",1:","),CN="",CNT=0
+"RTN","XUCERT",45,0)
+ F I=1:1:$L(SUBJ,DLM) S RDN=$$TRIM^XLFSTR($P(SUBJ,DLM,I)) I $$UP^XLFSTR($$TRIM^XLFSTR($P(RDN,"=")))="CN" S CNT=CNT+1,CN=$$TRIM^XLFSTR($P(RDN,"=",2,999))
+"RTN","XUCERT",46,0)
+ I CNT'=1 Q 0
+"RTN","XUCERT",47,0)
+ Q $$UP^XLFSTR(CN)=$$UP^XLFSTR(EXPECT)
+"RTN","XUCERT",48,0)
+ ;
+"RTN","XUCERT",49,0)
+TEST ;Subroutine. System checks to help with troubleshooting.
+"RTN","XUCERT",50,0)
+ ;Check if Cache version >= 2015.2
+"RTN","XUCERT",51,0)
+ ;    12345678901234567890123456789012345678901234567890123456789012345678901234567890
 "RTN","XUCERT",52,0)
+ W !,"XML digital signature validation is done differently depending on the version"
+"RTN","XUCERT",53,0)
+ W !,"of Cache being used on your system:"
+"RTN","XUCERT",54,0)
+ W !,"   Versions greater than or equal to 2015.2 use $$VAL1^XUCERT1"
+"RTN","XUCERT",55,0)
+ W !,"   Versions less than 2015.2 use $$VAL2^XUCERT1"
+"RTN","XUCERT",56,0)
+ W !,"   Your Cache Version is ",$$VERSION^%ZOSV(),!
+"RTN","XUCERT",57,0)
+ ;
+"RTN","XUCERT",58,0)
+ ;Check if PKI chain of trust to root is available (how?)
+"RTN","XUCERT",59,0)
+ ; ** Apparently Cache uses OpenSSL on underlying server for chain of trust. Check OpenSSL version?
+"RTN","XUCERT",60,0)
+ ;Check if %SuperServer and %TELNET/SSL is available (how? with https?)
+"RTN","XUCERT",61,0)
+ ; ** Is this still needed?
+"RTN","XUCERT",62,0)
+ ;Check if a local X.509 certificate is installed (how? same as %SuperServer check?)
+"RTN","XUCERT",63,0)
+ ; ** Not needed. All sites use SSL, so they have a certificate on the server.
+"RTN","XUCERT",64,0)
+ Q
+"RTN","XUCERT",65,0)
  ;
 "RTN","XUCERT1")
-0^22^B20606802^n/a
+0^22^B20520997^n/a
 "RTN","XUCERT1",1,0)
 XUCERT1 ;ISD/HGW Kernel PKI Certificate Utilities (cont) ;09/28/15  09:08
 "RTN","XUCERT1",2,0)
@@ -2689,7 +2715,7 @@ VAL1(DOC,SIG) ;Function. Validate Document (Cache 2015.2 or greater)
 "RTN","XUCERT1",11,0)
  S XUSTATUS=SIG.ValidateDocument(XUDOC)
 "RTN","XUCERT1",12,0)
- I $G(XUSTATUS)["Failed" Q "-1^Failed data integrity or signature validation check"
+ I $G(XUSTATUS)'=1 Q "-1^Failed data integrity or signature validation check"
 "RTN","XUCERT1",13,0)
  Q 1
 "RTN","XUCERT1",14,0)
@@ -2701,11 +2727,11 @@ VAL2(DOC,SIG) ;Function. Validate Document (Less than Cache 2015.2)
 "RTN","XUCERT1",17,0)
  S XUSTATUS=$$CHKDATA(DOC,SIG)  ; check integrity
 "RTN","XUCERT1",18,0)
- I 'XUSTATUS Q "-1^Failed data integrity check"
+ I XUSTATUS'=1 Q "-1^Failed data integrity check"
 "RTN","XUCERT1",19,0)
  S XUSTATUS=$$CHKSIGN(DOC,SIG)  ; check signature is valid
 "RTN","XUCERT1",20,0)
- I 'XUSTATUS Q "-1^Failed signature validation"
+ I XUSTATUS'=1 Q "-1^Failed signature validation"
 "RTN","XUCERT1",21,0)
  Q 1
 "RTN","XUCERT1",22,0)
@@ -2831,9 +2857,9 @@ CHKSIGN(READER,SIGNATURE) ;Function. Validate digital signature
 "RTN","XUCERT1",82,0)
  I +CERT=-1 Q CERT
 "RTN","XUCERT1",83,0)
- ;RSASHAVerify works with OpenSSL on Windows and Linux, but crashes with VMS.
+ ;RSASHAVerify works with OpenSSL on Windows and Linux, but crashes with VMS, so fail closed there.
 "RTN","XUCERT1",84,0)
- I $$VERSION^%ZOSV(1)["OpenVMS" Q 1  ;Quit if VMS, skip signature validation
+ I $$VERSION^%ZOSV(1)["OpenVMS" Q 0  ;Signature cannot be verified on VMS
 "RTN","XUCERT1",85,0)
  S STATUS=$System.Encryption.RSASHAVerify(BITLENGT,SIGNTXT,SIGNVAL,CERT)
 "RTN","XUCERT1",86,0)
@@ -6009,7 +6035,7 @@ KILL N %UCI,PGM,U,XQUR,XMCHAN G KILL1^XUSCLEAN
 "RTN","XUS1",130,0)
 NO G NO^XUS
 "RTN","XUSAML")
-0^14^B87822485^B78896546
+0^14^B89506055^B78896546
 "RTN","XUSAML",1,0)
 XUSAML ;ISD/HGW Kernel SAML Token Implementation ;10/01/15  14:40
 "RTN","XUSAML",2,0)
@@ -6431,11 +6457,11 @@ VALASSRT(XASSRT,DOC) ;Intrinsic Subroutine. Validate SAML assertion
 "RTN","XUSAML",210,0)
  ;Validate Digital Signature
 "RTN","XUSAML",211,0)
- I '$$VALIDATE^XUCERT(DOC) Q
+ I $$VALIDATE^XUCERT(DOC)'=1 Q  ;VALIDATE returns 1 on success or "-1^message" on failure
 "RTN","XUSAML",212,0)
  ;Validate Token Issuer (Subject of X509 Certificate used to sign token)
 "RTN","XUSAML",213,0)
- I '($G(XOBDATA("XOB RPC","SAML","ISSUER"))[$P($G(^XTV(8989.3,1,200)),U,1)) Q
+ I '$$ISSUER^XUCERT($G(XOBDATA("XOB RPC","SAML","ISSUER")),$P($G(^XTV(8989.3,1,200)),U,1)) Q
 "RTN","XUSAML",214,0)
  ;Token has been validated
 "RTN","XUSAML",215,0)
